@@ -2,7 +2,7 @@
 
 A warm-themed tmux config with vim keybindings and git worktree integration.
 
-![Screenshot](screenshot.png)
+![Screenshot](tmux-worktree.jpeg)
 
 ## Features
 
