@@ -28,8 +28,8 @@ fi
 
 case "$ACTION" in
     existing)
-        # Pick from existing remote/local branches
-        BRANCH=$(git branch -a --format='%(refname:short)' | fzf --prompt="Select branch: ")
+        # Pick from remote branches (excludes HEAD pointer)
+        BRANCH=$(git branch -r --format='%(refname:short)' | grep -v '/HEAD$' | fzf --prompt="Select branch: ")
         [ -z "$BRANCH" ] && exit 0
         # Strip remote prefix if this is a remote tracking branch
         # Check if branch starts with a known remote name
