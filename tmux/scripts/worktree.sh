@@ -1,6 +1,16 @@
 #!/bin/bash
 # Git worktree helper for tmux
 
+# Get branch name from worktree path using porcelain output
+get_branch_for_worktree() {
+    local wt="$1"
+    git worktree list --porcelain | awk -v wt="$wt" '
+        /^worktree / && substr($0, 10) == wt { found=1; next }
+        found && /^branch/ { sub("branch refs/heads/", ""); print; exit }
+        /^worktree/ { found=0 }
+    '
+}
+
 # Check dependencies
 for cmd in git fzf tmux; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -76,12 +86,7 @@ case "$ACTION" in
         WORKTREE=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | fzf --prompt="Delete worktree + branch: ")
         [ -z "$WORKTREE" ] && exit 0
 
-        # Get the branch name for this worktree (using awk for safe string matching)
-        BRANCH=$(git worktree list --porcelain | awk -v wt="$WORKTREE" '
-            /^worktree / && substr($0, 10) == wt { found=1; next }
-            found && /^branch/ { sub("branch refs/heads/", ""); print; exit }
-            /^worktree/ { found=0 }
-        ')
+        BRANCH=$(get_branch_for_worktree "$WORKTREE")
 
         # Remove worktree
         if ! git worktree remove "$WORKTREE"; then
@@ -92,12 +97,26 @@ case "$ACTION" in
 
         # Delete branch if found (and not main/master)
         if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ] && [ "$BRANCH" != "master" ]; then
-            if git branch -d "$BRANCH" 2>/dev/null || git branch -D "$BRANCH" 2>/dev/null; then
+            # Try safe delete first
+            if git branch -d "$BRANCH" 2>/dev/null; then
                 echo "Removed worktree: $WORKTREE"
                 echo "Deleted branch: $BRANCH"
             else
-                echo "Removed worktree: $WORKTREE"
-                echo "Warning: Failed to delete branch: $BRANCH"
+                # Branch has unmerged changes - ask user
+                echo "Warning: Branch '$BRANCH' has unmerged changes."
+                read -p "Force delete anyway? [y/N] " response
+                if [[ "$response" =~ ^[Yy]$ ]]; then
+                    if git branch -D "$BRANCH" 2>/dev/null; then
+                        echo "Removed worktree: $WORKTREE"
+                        echo "Force deleted branch: $BRANCH"
+                    else
+                        echo "Removed worktree: $WORKTREE"
+                        echo "Error: Failed to delete branch: $BRANCH"
+                    fi
+                else
+                    echo "Removed worktree: $WORKTREE"
+                    echo "Kept branch: $BRANCH"
+                fi
             fi
         else
             echo "Removed worktree: $WORKTREE"
@@ -111,12 +130,7 @@ case "$ACTION" in
         WORKTREE=$(git worktree list | tail -n +2 | fzf --prompt="Switch to worktree: " | awk '{print $1}')
         [ -z "$WORKTREE" ] && exit 0
 
-        # Get branch name from worktree (using awk for safe string matching)
-        BRANCH=$(git worktree list --porcelain | awk -v wt="$WORKTREE" '
-            /^worktree / && substr($0, 10) == wt { found=1; next }
-            found && /^branch/ { sub("branch refs/heads/", ""); print; exit }
-            /^worktree/ { found=0 }
-        ')
+        BRANCH=$(get_branch_for_worktree "$WORKTREE")
         SESSION_NAME=$(echo "$BRANCH" | tr './:' '-' | tr -d '\n')
 
         # Validate session name
@@ -145,6 +159,20 @@ esac
 DIR_NAME=$(echo "$BRANCH_NAME" | tr '/' '-')
 WORKTREE_PATH="$WORKTREE_DIR/$DIR_NAME"
 
+# Check if worktree already exists for this branch
+EXISTING_WT=$(git worktree list --porcelain | awk -v branch="refs/heads/$BRANCH_NAME" '
+    /^worktree / { wt=substr($0, 10) }
+    /^branch / && substr($0, 8) == branch { print wt; exit }
+')
+if [ -n "$EXISTING_WT" ]; then
+    echo "Error: Worktree already exists for branch '$BRANCH_NAME'"
+    echo "Location: $EXISTING_WT"
+    echo ""
+    echo "Use 'g s' to switch to it, or delete it first."
+    read -n 1
+    exit 1
+fi
+
 # Create worktree
 if [ "$ACTION" = "new" ]; then
     if ! git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"; then
@@ -167,7 +195,17 @@ if [ -z "$SESSION_NAME" ]; then
     read -n 1
     exit 1
 fi
-if ! tmux new-session -d -s "$SESSION_NAME" -c "$WORKTREE_PATH" 2>/dev/null; then
-    echo "Warning: Session '$SESSION_NAME' may already exist"
+
+# Check if session exists, reuse it if so
+if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    echo "Session '$SESSION_NAME' already exists, switching to it"
+    sleep 1
 fi
-tmux switch-client -t "$SESSION_NAME"
+
+# Create session if needed, then switch
+tmux new-session -d -s "$SESSION_NAME" -c "$WORKTREE_PATH" 2>/dev/null
+if ! tmux switch-client -t "$SESSION_NAME" 2>/dev/null; then
+    echo "Error: Failed to switch to session '$SESSION_NAME'"
+    read -n 1
+    exit 1
+fi
