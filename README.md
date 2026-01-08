@@ -19,8 +19,20 @@ A warm-themed tmux config with vim keybindings and git worktree integration.
 
 ## Installation
 
+Install dependencies:
+
 ```bash
-git clone https://github.com/yourusername/tmux-worktree.git
+# Debian/Ubuntu
+sudo apt install tmux git fzf
+
+# macOS
+brew install tmux git fzf
+```
+
+Clone and install:
+
+```bash
+git clone https://github.com/christophergyman/tmux-worktree.git
 cd tmux-worktree
 ./install.sh
 ```
