@@ -37,7 +37,8 @@ cd tmux-worktree
 ./install.sh
 ```
 
-## Keybindings
+<details>
+<summary><strong>Keybindings</strong> (click to expand)</summary>
 
 All bindings use the tmux prefix (default: `Ctrl-b`).
 
@@ -88,6 +89,8 @@ All bindings use the tmux prefix (default: `Ctrl-b`).
 | `g D` | Delete worktree and branch |
 
 Press `?` for an in-terminal cheatsheet.
+
+</details>
 
 ## How Worktrees Work
 
