@@ -24,6 +24,7 @@ cat << 'EOF'
     p           Paste
 
   SESSIONS
+    C-j/C-k     Prev/Next session
     S           Session chooser
     N           New session
 
