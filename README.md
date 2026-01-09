@@ -74,6 +74,7 @@ All bindings use the tmux prefix (default: `Ctrl-b`).
 
 | Key | Action |
 |-----|--------|
+| `C-j` / `C-k` | Previous / Next session |
 | `S` | Session chooser |
 | `N` | New session |
 
