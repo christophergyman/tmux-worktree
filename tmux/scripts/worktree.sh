@@ -72,7 +72,16 @@ case "$ACTION" in
         # Delete worktree only (keep branch)
         WORKTREE=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | fzf --prompt="Delete worktree (keep branch): ")
         [ -z "$WORKTREE" ] && exit 0
+
+        # Get branch name for session cleanup
+        BRANCH=$(get_branch_for_worktree "$WORKTREE")
+        if [ -n "$BRANCH" ]; then
+            SESSION_NAME=$(echo "$BRANCH" | tr './:' '-' | tr -d '\n')
+            tmux kill-session -t "$SESSION_NAME" 2>/dev/null
+        fi
+
         if git worktree remove "$WORKTREE"; then
+            git worktree prune
             echo "Removed worktree: $WORKTREE"
             echo "Branch kept"
         else
@@ -88,12 +97,21 @@ case "$ACTION" in
 
         BRANCH=$(get_branch_for_worktree "$WORKTREE")
 
+        # Kill tmux session for this worktree
+        if [ -n "$BRANCH" ]; then
+            SESSION_NAME=$(echo "$BRANCH" | tr './:' '-' | tr -d '\n')
+            tmux kill-session -t "$SESSION_NAME" 2>/dev/null
+        fi
+
         # Remove worktree
         if ! git worktree remove "$WORKTREE"; then
             echo "Error: Failed to remove worktree"
             read -n 1
             exit 1
         fi
+
+        # Prune stale worktree metadata
+        git worktree prune
 
         # Delete branch if found (and not main/master)
         if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ] && [ "$BRANCH" != "master" ]; then
