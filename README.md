@@ -10,6 +10,7 @@ A warm-themed tmux config with vim keybindings and git worktree integration.
 - **Vim-style keybindings** - hjkl navigation, vim copy mode
 - **Git worktree integration** - Manage worktrees with fzf selection
 - **Session per worktree** - Auto-creates tmux sessions named after branches
+- **Smart status bar** - Shows `repo-name/session` with git branch, updates dynamically as you navigate
 
 ## Requirements
 
