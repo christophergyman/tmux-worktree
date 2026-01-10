@@ -24,6 +24,7 @@ ACTION="$1"
 # Get main repo root (works from both main repo and worktrees)
 GIT_DIR=$(git rev-parse --absolute-git-dir 2>/dev/null)
 REPO_ROOT=$(dirname "${GIT_DIR%/worktrees/*}")
+REPO_PARENT=$(dirname "$REPO_ROOT")
 
 if [ -z "$REPO_ROOT" ]; then
     echo "Error: Not in a git repository"
@@ -72,8 +73,9 @@ case "$ACTION" in
         ;;
     delete)
         # Delete worktree only (keep branch)
-        WORKTREE=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | fzf --prompt="Delete worktree (keep branch): ")
-        [ -z "$WORKTREE" ] && exit 0
+        SHORT_PATH=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | sed "s|^$REPO_PARENT/||" | fzf --prompt="Delete worktree (keep branch): ")
+        [ -z "$SHORT_PATH" ] && exit 0
+        WORKTREE="$REPO_PARENT/$SHORT_PATH"
 
         # Get branch name for session cleanup
         BRANCH=$(get_branch_for_worktree "$WORKTREE")
@@ -94,8 +96,9 @@ case "$ACTION" in
         ;;
     delete-all)
         # Delete worktree AND branch
-        WORKTREE=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | fzf --prompt="Delete worktree + branch: ")
-        [ -z "$WORKTREE" ] && exit 0
+        SHORT_PATH=$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2- | sed "s|^$REPO_PARENT/||" | fzf --prompt="Delete worktree + branch: ")
+        [ -z "$SHORT_PATH" ] && exit 0
+        WORKTREE="$REPO_PARENT/$SHORT_PATH"
 
         BRANCH=$(get_branch_for_worktree "$WORKTREE")
 
@@ -147,8 +150,9 @@ case "$ACTION" in
         ;;
     switch)
         # Pick from existing worktrees (exclude main worktree)
-        WORKTREE=$(git worktree list | tail -n +2 | fzf --prompt="Switch to worktree: " | awk '{print $1}')
-        [ -z "$WORKTREE" ] && exit 0
+        SHORT_PATH=$(git worktree list | tail -n +2 | sed "s|^$REPO_PARENT/||" | fzf --prompt="Switch to worktree: " | awk '{print $1}')
+        [ -z "$SHORT_PATH" ] && exit 0
+        WORKTREE="$REPO_PARENT/$SHORT_PATH"
 
         BRANCH=$(get_branch_for_worktree "$WORKTREE")
         SESSION_NAME=$(echo "$BRANCH" | tr './:' '-' | tr -d '\n')
