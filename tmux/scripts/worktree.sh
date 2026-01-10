@@ -191,9 +191,24 @@ if [ -n "$EXISTING_WT" ]; then
     exit 1
 fi
 
+# Get the default branch for new worktrees
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+if [ -z "$DEFAULT_BRANCH" ]; then
+    # Fallback: check if main exists, otherwise master
+    if git show-ref --verify --quiet refs/heads/main; then
+        DEFAULT_BRANCH="main"
+    elif git show-ref --verify --quiet refs/heads/master; then
+        DEFAULT_BRANCH="master"
+    else
+        echo "Error: Could not determine default branch"
+        read -n 1
+        exit 1
+    fi
+fi
+
 # Create worktree
 if [ "$ACTION" = "new" ]; then
-    if ! git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"; then
+    if ! git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" "$DEFAULT_BRANCH"; then
         echo "Error: Failed to create worktree with new branch"
         read -n 1
         exit 1
