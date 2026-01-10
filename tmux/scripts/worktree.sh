@@ -21,7 +21,9 @@ for cmd in git fzf tmux; do
 done
 
 ACTION="$1"
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+# Get main repo root (works from both main repo and worktrees)
+GIT_DIR=$(git rev-parse --absolute-git-dir 2>/dev/null)
+REPO_ROOT=$(dirname "${GIT_DIR%/worktrees/*}")
 
 if [ -z "$REPO_ROOT" ]; then
     echo "Error: Not in a git repository"
