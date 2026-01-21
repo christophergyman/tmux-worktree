@@ -14,9 +14,31 @@ A warm-themed tmux config with vim keybindings and git worktree integration.
 
 ## Requirements
 
-- tmux
+- tmux 3.3+ (for escape sequence passthrough)
 - git
 - [fzf](https://github.com/junegunn/fzf)
+
+## iTerm2 Integration
+
+This config includes two ways to use tmux with iTerm2:
+
+### Passthrough Mode (Default)
+Works automatically. Escape sequences (progress bars, notifications, clipboard) pass through tmux to iTerm2.
+
+### Control Mode (Optional)
+For native iTerm2 tabs and scrollback instead of tmux's built-in UI:
+
+```bash
+~/.config/tmux/scripts/tmux-cc.sh        # Creates/attaches to "main" session
+~/.config/tmux/scripts/tmux-cc.sh work   # Creates/attaches to "work" session
+```
+
+Or add a shell alias:
+```bash
+alias tmuxcc='~/.config/tmux/scripts/tmux-cc.sh'
+```
+
+> **Note**: Control mode only works with iTerm2. Ghostty and other terminals don't support it.
 
 ## Installation
 
